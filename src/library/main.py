@@ -1,44 +1,47 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel
-
 
 app = FastAPI()
 
-
-class Book(BaseModel):
+class BookCreate(BaseModel):
     title: str
     author: str
     published_date: str
-    description: str = None
-    available: bool = True
-    id: int = None  
-    created_at: str = None
-    updated_at: str = None
-    deleted_at: str = None
-    borrowed_by: str = None
-    borrowed_date: str = None
-    returned_date: str = None
 
-books = []
+books: list[dict] = []
+next_id = 1
 
 
 @app.get("/")
 def home():
     return {"message": "Hello, World!"}
+    
 
+@app.post("/books", status_code=status.HTTP_201_CREATED)
+def create_book(book: BookCreate):
+    global next_id
+
+    new_book = {
+        "id": next_id,
+        **book.model_dump(),
+    }
+
+    books.append(new_book)
+    next_id += 1
+
+    return new_book
 
 @app.get("/books")
-def list_books(limit: int = 10):
-    return {"message": "Books", "books": books[:limit]}
-
-@app.get("/books/{book_id}")
-def get_book(book_id: int) -> Book:
-    if book_id < 0 or book_id >= len(books):
-        raise HTTPException(status_code=404, detail=f"Book with id {book_id} not found")
-    return {"message": "Book", "book": books[book_id]}
-
-@app.post("/books")
-def create_book(book: Book):
-    books.append(book.model_dump())
+def list_books():
     return books
 
+@app.get("/books/{book_id}")
+def get_book(book_id: int):
+    for book in books:
+        if book["id"] == book_id:
+            return book
+
+    raise HTTPException(
+        status_code=404,
+        detail="Book not found",
+    )
