@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.11"
 dependencies = [
     "fastapi[standard]>=0.143.0",
+    "pydantic-settings>=2.15.0",
 ]
 
 [project.scripts]
@@ -22,4 +23,5 @@ build-backend = "uv_build"
 dev = [
     "httpx>=0.28.1",
     "pytest>=9.1.1",
+    "ruff>=0.17.0",
 ]
