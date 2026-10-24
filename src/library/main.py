@@ -4,6 +4,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from library.config import settings
+from library.data import models  # noqa: F401
+from library.data.database import Base, SessionLocal, engine
 from library.data.seed import seed_books
 from library.exceptions import BookNotFoundError
 from library.routers import books
@@ -11,10 +13,11 @@ from library.routers import books
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    Base.metadata.create_all(engine)
     if settings.seed_data:
-        seed_books()
+        with SessionLocal() as db:
+            seed_books(db)
     yield
-
 
 app = FastAPI(
     title=settings.app_name,

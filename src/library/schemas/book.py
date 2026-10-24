@@ -1,7 +1,6 @@
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from uuid import UUID
-
-from pydantic import BaseModel
 
 
 class BookBase(BaseModel):
@@ -23,4 +22,5 @@ class BookUpdate(BaseModel):
 
 
 class BookRead(BookBase):
+    model_config = ConfigDict(from_attributes=True)
     id: UUID

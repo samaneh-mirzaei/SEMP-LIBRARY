@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from sqlalchemy.orm import Session
+
 from library.data import book_store
 from library.schemas.book import BookRead
 
@@ -41,9 +43,9 @@ SEED_BOOKS = [
 ]
 
 
-def seed_books() -> None:
-    if book_store.get_all():  # dont duplicate data
+def seed_books(db: Session) -> None:
+    if book_store.get_all(db):  # don't duplicate data
         return
 
     for book in SEED_BOOKS:
-        book_store.save(book)
+        book_store.save(db, book)
