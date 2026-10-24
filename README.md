@@ -1,210 +1,281 @@
-# 📚 سیستم مدیریت کتابخانه (Library API)
+# 📚 Library Management System (Library API)
 
-یک API ساده برای مدیریت کتاب‌های یک کتابخانه، ساخته‌شده با **FastAPI**. این پروژه به‌عنوان تمرین دوره‌ی بک‌اند (بوتکمپ) نوشته شده و داده‌ها را به‌صورت **درون حافظه (In-Memory)** نگه می‌دارد، یعنی دیتابیس ندارد و با هر بار خاموش و روشن شدن سرور، داده‌ها پاک می‌شوند.
-
----
-
-## فهرست مطالب
-
-- [امکانات](#امکانات)
-- [فناوری‌ها](#فناوریها)
-- [ساختار پروژه](#ساختار-پروژه)
-- [پیش‌نیازها](#پیشنیازها)
-- [نصب و راه‌اندازی](#نصب-و-راهاندازی)
-- [اجرای برنامه](#اجرای-برنامه)
-- [مرجع API](#مرجع-api)
-- [نمونه‌های استفاده](#نمونههای-استفاده)
-- [تنظیمات](#تنظیمات)
-- [داده‌های نمونه (Seed)](#دادههای-نمونه-seed)
-- [اجرای تست‌ها](#اجرای-تستها)
-- [معماری پروژه](#معماری-پروژه)
-- [محدودیت‌ها](#محدودیتها)
-- [عیب‌یابی](#عیبیابی)
+A simple API for managing a library's books, built with **FastAPI** and **PostgreSQL**. This project was developed as part of a backend development bootcamp. Data is stored in a **PostgreSQL** database, so it persists even when the server is stopped and restarted.
 
 ---
 
-## امکانات
+## Table of Contents
 
-- ثبت، مشاهده‌ی لیست، دریافت، ویرایش جزئی و حذف کتاب
-- شناسه‌ی یکتا (UUID) برای هر کتاب، به‌جای ایندکس لیست
-- اعتبارسنجی خودکار ورودی و خروجی با Pydantic
-- مستندات تعاملی خودکار (Swagger UI و ReDoc)
-- بارگذاری اختیاری داده‌های نمونه هنگام اجرای سرور
-- تنظیمات قابل تغییر از طریق متغیرهای محیطی یا فایل `.env`
-- مجموعه تست خودکار با pytest
+- [Features](#features)
+- [Technologies](#technologies)
+- [Project Structure](#project-structure)
+- [Prerequisites](#prerequisites)
+- [Installation and Setup](#installation-and-setup)
+- [Database Setup](#database-setup)
+- [Running the Application](#running-the-application)
+- [API Reference](#api-reference)
+- [Usage Examples](#usage-examples)
+- [Configuration](#configuration)
+- [Seed Data](#seed-data)
+- [Running Tests](#running-tests)
+- [Project Architecture](#project-architecture)
+- [Limitations](#limitations)
+- [Troubleshooting](#troubleshooting)
 
-## فناوری‌ها
+---
 
-| ابزار | کاربرد |
+## Features
+
+- Create, list, retrieve, partially update, and delete books
+- Persistent data storage in PostgreSQL
+- A unique UUID for each book instead of a list index
+- Automatic request and response validation with Pydantic
+- Automatically generated interactive documentation (Swagger UI and ReDoc)
+- Automatic table creation when the server starts
+- Optional loading of sample data at startup
+- Configurable settings through environment variables or a `.env` file
+- Automated tests with pytest, using a temporary database without modifying production data
+
+## Technologies
+
+| Technology | Purpose |
 |---|---|
-| Python 3.11+ | زبان برنامه‌نویسی |
-| uv | مدیریت وابستگی‌ها و محیط مجازی |
-| FastAPI | فریم‌ورک وب |
-| Uvicorn | سرور اجرای برنامه |
-| Pydantic / pydantic-settings | اعتبارسنجی داده و مدیریت تنظیمات |
-| pytest / httpx | تست خودکار |
-| Ruff | بررسی و فرمت کد |
+| Python 3.11+ | Programming language |
+| uv | Dependency and virtual environment management |
+| FastAPI | Web framework |
+| Uvicorn | Application server |
+| PostgreSQL | Database |
+| SQLAlchemy 2 | Working with the database through Python (ORM) |
+| psycopg 3 | Python driver for PostgreSQL |
+| Pydantic / pydantic-settings | Data validation and settings management |
+| pytest / httpx | Automated testing |
+| Ruff | Linting and code formatting |
 
-## ساختار پروژه
+## Project Structure
 
-```
+```text
 Library/
 ├── src/
 │   └── library/
-│       ├── main.py            # ساخت اپلیکیشن، اتصال روترها، lifespan
-│       ├── config.py          # تنظیمات برنامه (pydantic-settings)
-│       ├── exceptions.py      # خطاهای اختصاصی (BookNotFoundError)
+│       ├── main.py              # Application setup, router registration, lifespan
+│       ├── config.py            # Application settings (pydantic-settings)
+│       ├── exceptions.py        # Custom exceptions (BookNotFoundError)
 │       ├── routers/
-│       │   └── books.py       # مسیرهای HTTP مربوط به کتاب‌ها
+│       │   └── books.py         # HTTP endpoints for books
 │       ├── schemas/
-│       │   └── book.py        # مدل‌های ورودی و خروجی
+│       │   └── book.py          # Request and response models (Pydantic)
 │       ├── services/
-│       │   └── book_service.py  # منطق برنامه
+│       │   └── book_service.py  # Application logic
 │       └── data/
-│           ├── book_store.py  # ذخیره‌سازی درون حافظه
-│           └── seed.py        # داده‌های نمونه
+│           ├── database.py      # PostgreSQL connection (engine, session, get_db)
+│           ├── models.py        # SQLAlchemy model for the books table
+│           ├── book_store.py    # Database read/write operations
+│           └── seed.py          # Sample data
 ├── tests/
-│   ├── conftest.py            # فیکسچرهای pytest
-│   └── test_books.py          # تست‌های API
-├── pyproject.toml             # تنظیمات پروژه و وابستگی‌ها (اجرا و توسعه)
-├── uv.lock                    # نسخه‌ی دقیق وابستگی‌ها (توسط uv ساخته می‌شود)
-├── .python-version            # نسخه‌ی پایتون پروژه
+│   ├── conftest.py              # pytest fixtures (temporary database)
+│   └── test_books.py            # API tests
+├── pyproject.toml               # Project and dependency configuration
+├── uv.lock                      # Exact dependency versions (generated by uv)
+├── .python-version              # Project Python version
+├── .env                         # Local settings (not committed to Git)
 └── README.md
 ```
 
-## پیش‌نیازها
+## Prerequisites
 
-- **Python نسخه‌ی 3.11 یا بالاتر**
-- **uv** (مدیر پکیج و محیط مجازی)
+- **Python 3.11 or later**
+- **uv** (package and virtual environment manager)
+- **PostgreSQL** (version 14 or later; see [Database Setup](#database-setup))
 - **Git**
 
-برای بررسی نسخه‌ی پایتون:
+Check your Python version:
 
 ```bash
-python --version      # ویندوز
-python3 --version     # لینوکس و مک
+python --version      # Windows
+python3 --version     # Linux and macOS
 ```
 
-### نصب uv
+### Installing uv
 
-#### 🪟 ویندوز (PowerShell)
+#### 🪟 Windows (PowerShell)
 
 ```powershell
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-#### 🐧 لینوکس / 🍎 مک (macOS)
+#### 🐧 Linux / 🍎 macOS
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-> اگر پایتون و pip دارید، `pip install uv` هم کار می‌کند.
+> If you already have Python and pip installed, `pip install uv` also works.
 
-پس از نصب، ترمینال را ببندید و دوباره باز کنید، سپس با `uv --version` از نصب بودن آن مطمئن شوید.
+After installation, close and reopen your terminal, then verify the installation:
 
-## نصب و راه‌اندازی
+```bash
+uv --version
+```
 
-### ۱. دریافت پروژه
+## Installation and Setup
+
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/tiredpotatoe/SEMP-LIBRARY.git
 cd SEMP-LIBRARY
 ```
 
-### ۲. نصب وابستگی‌ها
+### 2. Install dependencies
 
-از **پوشه‌ی اصلی پروژه** (کنار فایل `pyproject.toml`) اجرا کنید:
+Run this command from the **project root directory**, next to `pyproject.toml`:
 
 ```bash
 uv sync
 ```
 
-این یک دستور همه‌کاره است:
+This single command does the following:
 
-- در صورت نیاز نسخه‌ی مناسب پایتون را دریافت می‌کند
-- محیط مجازی `.venv` را خودکار می‌سازد (**نیازی به ساخت یا فعال‌سازی دستی آن نیست**)
-- وابستگی‌های اجرا و توسعه (مثل pytest و httpx) را با نسخه‌های ثبت‌شده در `uv.lock` نصب می‌کند
-- خود پروژه (`library`) را در حالت editable نصب می‌کند، پس پایتون پکیج `library` را از هر جا پیدا می‌کند
+- Downloads a suitable Python version if needed
+- Automatically creates the `.venv` virtual environment (**you do not need to create or activate it manually**)
+- Installs runtime and development dependencies (such as pytest and httpx) at the versions recorded in `uv.lock`
+- Installs the project (`library`) in editable mode, so Python can find the `library` package
 
-برای نصب فقط وابستگی‌های **اجرای برنامه** (بدون ابزارهای توسعه و تست):
+To install **runtime dependencies only**, without development and testing tools:
 
 ```bash
 uv sync --no-dev
 ```
 
-### افزودن پکیج جدید
+### 3. Set up the database
+
+Before running the application, PostgreSQL must be installed and running, and a database named `library` must exist. See the next section for instructions.
+
+### 4. Create the `.env` file
+
+Add your database connection details to a `.env` file (see [Configuration](#configuration)).
+
+### Adding a new package
 
 ```bash
-uv add <package>          # وابستگی اجرا
-uv add --dev <package>    # وابستگی توسعه (مثل ruff)
+uv add <package>          # Runtime dependency
+uv add --dev <package>    # Development dependency (e.g. Ruff)
 ```
 
-این دستورها `pyproject.toml` و `uv.lock` را خودکار به‌روز می‌کنند.
+These commands automatically update `pyproject.toml` and `uv.lock`.
 
-## اجرای برنامه
+## Database Setup
 
-دستور زیر را از **پوشه‌ی اصلی پروژه** اجرا کنید:
+### Installing PostgreSQL
+
+#### 🪟 Windows
+
+1. Download and run the installer from https://www.postgresql.org/download/windows/.
+2. Follow the installation steps using the default settings (port `5432`).
+3. When prompted, choose a password for the `postgres` user and **write it down**.
+4. PostgreSQL is installed as a Windows service and runs in the background.
+
+#### 🐧 Linux (Ubuntu)
+
+```bash
+sudo apt install postgresql
+sudo systemctl start postgresql
+sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres123';"
+```
+
+#### 🍎 macOS
+
+```bash
+brew install postgresql@17
+brew services start postgresql@17
+```
+
+#### 🐳 Using Docker (all operating systems)
+
+```bash
+docker run --name library-db -e POSTGRES_PASSWORD=postgres123 -e POSTGRES_DB=library -p 5432:5432 -d postgres:17
+```
+
+This command creates the `library` database automatically, so you can skip the next step.
+
+### Create the `library` database
+
+**Using pgAdmin (Windows):** Open pgAdmin, right-click **Databases**, select **Create → Database...**, enter `library` as the name, and click **Save**.
+
+**Or use the command line:**
+
+```bash
+psql -U postgres -h localhost -c "CREATE DATABASE library;"
+```
+
+> Create only the database. The application creates the `books` table automatically when it starts.
+
+## Running the Application
+
+Run the following command from the **project root directory**:
 
 ```bash
 uv run uvicorn library.main:app --reload
 ```
 
-- `uv run` دستور را داخل محیط مجازی پروژه اجرا می‌کند (نیازی به فعال‌سازی `.venv` نیست)
-- `library.main:app` یعنی شیء `app` داخل فایل `main.py` از پکیج `library`
-- `--reload` سرور را با هر تغییر کد دوباره راه‌اندازی می‌کند (فقط برای توسعه)
+- `uv run` executes the command inside the project's virtual environment; you do not need to activate `.venv`.
+- `library.main:app` refers to the `app` object in `main.py` inside the `library` package.
+- `--reload` automatically restarts the server when code changes. Use this option for development only.
 
-پس از اجرا، آدرس‌های زیر در دسترس هستند:
+At startup, the application creates the `books` table if it does not exist and then loads sample data if `SEED_DATA` is enabled.
 
-| آدرس | توضیح |
+Once the server is running, these URLs are available:
+
+| URL | Description |
 |---|---|
-| http://127.0.0.1:8000 | صفحه‌ی اصلی API |
-| http://127.0.0.1:8000/docs | مستندات تعاملی (Swagger UI) |
-| http://127.0.0.1:8000/redoc | مستندات ReDoc |
+| http://127.0.0.1:8000 | API root |
+| http://127.0.0.1:8000/docs | Interactive API documentation (Swagger UI) |
+| http://127.0.0.1:8000/redoc | ReDoc documentation |
 
-> ساده‌ترین راه برای امتحان کردن همه‌ی endpointها، صفحه‌ی `/docs` است. هر endpoint را باز کنید، دکمه‌ی **Try it out** را بزنید و درخواست بفرستید، بدون نیاز به نوشتن هیچ دستوری.
+> The easiest way to try all endpoints is to open `/docs`. Expand an endpoint, click **Try it out**, and send a request without writing any commands.
 
-## مرجع API
+## API Reference
 
-| متد | مسیر | توضیح | کد موفقیت |
+| Method | Endpoint | Description | Success Status |
 |---|---|---|---|
-| `GET` | `/books` | دریافت لیست کتاب‌ها | `200` |
-| `POST` | `/books` | افزودن کتاب جدید | `201` |
-| `GET` | `/books/{book_id}` | دریافت اطلاعات یک کتاب | `200` |
-| `PATCH` | `/books/{book_id}` | ویرایش اطلاعات یک کتاب | `200` |
-| `DELETE` | `/books/{book_id}` | حذف یک کتاب | `204` |
+| `GET` | `/books` | List all books | `200` |
+| `POST` | `/books` | Add a new book | `201` |
+| `GET` | `/books/{book_id}` | Retrieve a book | `200` |
+| `PATCH` | `/books/{book_id}` | Partially update a book | `200` |
+| `DELETE` | `/books/{book_id}` | Delete a book | `204` |
 
-### مدل کتاب
+### Book Model
 
-| فیلد | نوع | الزامی | پیش‌فرض | توضیح |
+| Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `id` | UUID | فقط در پاسخ | تولید توسط سرور | شناسه‌ی یکتای کتاب |
-| `title` | رشته | بله | - | عنوان کتاب |
-| `author` | رشته | بله | - | نویسنده |
-| `is_available` | بولی | خیر | `true` | آیا کتاب موجود است؟ |
-| `published_date` | رشته | خیر | `null` | تاریخ انتشار (مثلاً `1965-08-01`) |
+| `id` | UUID | Response only | Generated by the server | Unique book identifier |
+| `title` | String | Yes | — | Book title |
+| `author` | String | Yes | — | Author |
+| `is_available` | Boolean | No | `true` | Whether the book is available |
+| `published_date` | String | No | `null` | Publication date (e.g. `1965-08-01`) |
 
-نکته‌ها:
+Notes:
 
-- هنگام ساخت کتاب نباید `id` بفرستید، سرور خودش آن را می‌سازد (اگر هم بفرستید نادیده گرفته می‌شود).
-- در `PATCH` فقط فیلدهایی را بفرستید که می‌خواهید تغییر کنند. بقیه‌ی فیلدها دست‌نخورده می‌مانند.
+- Do not include `id` when creating a book; the server generates it (and ignores it if supplied).
+- For `PATCH`, send only the fields you want to change. All other fields remain unchanged.
 
-### کدهای خطا
+### Error Status Codes
 
-| کد | معنی |
+| Status | Meaning |
 |---|---|
-| `404 Not Found` | کتابی با این شناسه وجود ندارد |
-| `422 Unprocessable Entity` | ورودی نامعتبر است (فیلد الزامی ارسال نشده، نوع داده اشتباه است، یا شناسه فرمت UUID ندارد) |
+| `404 Not Found` | No book exists with the specified ID |
+| `422 Unprocessable Entity` | Invalid input (a required field is missing, a value has the wrong type, or the ID is not a valid UUID) |
+| `500 Internal Server Error` | Usually indicates a database connection problem. Check the server logs. |
 
-## نمونه‌های استفاده
+## Usage Examples
 
-در مثال‌های زیر فرض شده سرور روی `http://127.0.0.1:8000` در حال اجراست. به‌جای `<BOOK_ID>` شناسه‌ی یک کتاب را قرار دهید.
+The following examples assume the server is running at `http://127.0.0.1:8000`. Replace `<BOOK_ID>` with a book's ID.
 
-> 🪟 **کاربران ویندوز:** در PowerShell دستور `curl` در واقع یک نام مستعار برای `Invoke-WebRequest` است و مثال‌های `curl` پایین کار نمی‌کنند. از `curl.exe` یا از نسخه‌ی `Invoke-RestMethod` که کنار هر مثال آمده استفاده کنید.
+> 🪟 **Windows users:** In PowerShell, `curl` is an alias for `Invoke-WebRequest`, so the `curl` examples below will not work as written. Use `curl.exe` or the corresponding `Invoke-RestMethod` example.
 
-### افزودن کتاب (POST)
+### Add a book (POST)
 
-**لینوکس / مک / `curl.exe` در ویندوز:**
+**Linux / macOS / `curl.exe` on Windows:**
 
 ```bash
 curl -X POST http://127.0.0.1:8000/books \
@@ -220,7 +291,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/books `
   -Body '{"title": "Dune", "author": "Frank Herbert", "published_date": "1965-08-01"}'
 ```
 
-پاسخ (`201 Created`):
+Response (`201 Created`):
 
 ```json
 {
@@ -232,7 +303,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/books `
 }
 ```
 
-### دریافت لیست کتاب‌ها (GET)
+### List books (GET)
 
 ```bash
 curl http://127.0.0.1:8000/books
@@ -242,7 +313,7 @@ curl http://127.0.0.1:8000/books
 Invoke-RestMethod http://127.0.0.1:8000/books
 ```
 
-### دریافت یک کتاب (GET)
+### Retrieve a book (GET)
 
 ```bash
 curl http://127.0.0.1:8000/books/<BOOK_ID>
@@ -252,9 +323,9 @@ curl http://127.0.0.1:8000/books/<BOOK_ID>
 Invoke-RestMethod http://127.0.0.1:8000/books/<BOOK_ID>
 ```
 
-### ویرایش کتاب (PATCH)
+### Update a book (PATCH)
 
-برای مثال، علامت‌گذاری کتاب به‌عنوان «قرض داده شده»:
+For example, mark a book as borrowed:
 
 ```bash
 curl -X PATCH http://127.0.0.1:8000/books/<BOOK_ID> \
@@ -268,7 +339,7 @@ Invoke-RestMethod -Method Patch -Uri http://127.0.0.1:8000/books/<BOOK_ID> `
   -Body '{"is_available": false}'
 ```
 
-### حذف کتاب (DELETE)
+### Delete a book (DELETE)
 
 ```bash
 curl -X DELETE http://127.0.0.1:8000/books/<BOOK_ID>
@@ -278,73 +349,104 @@ curl -X DELETE http://127.0.0.1:8000/books/<BOOK_ID>
 Invoke-RestMethod -Method Delete -Uri http://127.0.0.1:8000/books/<BOOK_ID>
 ```
 
-پاسخ موفق `204 No Content` است و بدنه‌ای ندارد.
+A successful delete returns `204 No Content` with no response body.
 
-## تنظیمات
+## Configuration
 
-تنظیمات برنامه در فایل `src/library/config.py` تعریف شده‌اند. هر تنظیم یک مقدار پیش‌فرض دارد، بنابراین **برنامه بدون هیچ پیکربندی اضافه هم اجرا می‌شود.**
+Application settings are defined in `src/library/config.py`. Each setting has a default value, but **you must configure the database URL for your own system in `.env`**. Never put your actual database password in `config.py`.
 
-| تنظیم | متغیر محیطی | نوع | پیش‌فرض | توضیح |
+| Setting | Environment Variable | Type | Default | Description |
 |---|---|---|---|---|
-| `app_name` | `APP_NAME` | رشته | `Library API` | نام برنامه (در `/docs` نمایش داده می‌شود) |
-| `debug` | `DEBUG` | بولی | `false` | حالت دیباگ |
-| `seed_data` | `SEED_DATA` | بولی | `true` | بارگذاری داده‌های نمونه هنگام اجرا |
+| `app_name` | `APP_NAME` | String | `Library API` | Application name shown in `/docs` |
+| `debug` | `DEBUG` | Boolean | `false` | Debug mode |
+| `seed_data` | `SEED_DATA` | Boolean | `true` | Load sample data at startup |
+| `database_url` | `DATABASE_URL` | String | `postgresql+psycopg://postgres:postgres@localhost:5432/library` | PostgreSQL connection URL |
 
-مقدارهای بولی را می‌توانید با `true` / `false` (یا `1` / `0`) بنویسید. نام متغیرهای محیطی به بزرگی و کوچکی حروف حساس نیست.
+Boolean values can be written as `true` / `false` (or `1` / `0`). Environment variable names are case-insensitive.
 
-### روش اول: فایل `.env`
+### Database URL Format
 
-یک فایل به نام `.env` در **پوشه‌ی اصلی پروژه** (همان جایی که دستور `uv run` را اجرا می‌کنید) بسازید:
-
+```text
+postgresql+psycopg://username:password@host:port/database_name
 ```
+
+| Part | Meaning |
+|---|---|
+| `postgresql+psycopg` | Database type and Python driver |
+| Username | Database username (usually `postgres`) |
+| Password | Password chosen during PostgreSQL installation |
+| Host | `localhost` means the database is running on the same machine |
+| Port | Default is `5432` |
+| Database name | `library` |
+
+> If your password contains special characters such as `@`, `#`, or `/`, the URL may not parse correctly. For initial setup, use a password containing only letters and numbers.
+
+### Option 1: Use a `.env` File
+
+Create a file named `.env` in the **project root directory** (the same directory where you run `uv run`):
+
+```dotenv
 APP_NAME=Library API (dev)
 DEBUG=true
-SEED_DATA=false
+SEED_DATA=true
+DATABASE_URL=postgresql+psycopg://postgres:your_password@localhost:5432/library
 ```
 
-> فایل `.env` مخصوص هر سیستم است و در `.gitignore` قرار دارد. آن را در گیت‌هاب commit نکنید.
+> The `.env` file is specific to your machine and is listed in `.gitignore`. Do not commit it to GitHub because it contains your database password. Make sure the filename is exactly `.env`, not `.env.txt`.
 
-### روش دوم: متغیر محیطی موقت
+To verify that the application reads the setting correctly:
 
-**ویندوز (PowerShell):**
+```bash
+uv run python -c "from library.config import settings; print(settings.database_url)"
+```
+
+### Option 2: Temporary Environment Variables
+
+**Windows (PowerShell):**
 
 ```powershell
 $env:SEED_DATA = "false"
 uv run uvicorn library.main:app --reload
 ```
 
-**ویندوز (CMD):**
+**Windows (CMD):**
 
 ```bat
 set SEED_DATA=false
 uv run uvicorn library.main:app --reload
 ```
 
-**لینوکس / مک:**
+**Linux / macOS:**
 
 ```bash
 SEED_DATA=false uv run uvicorn library.main:app --reload
 ```
 
-### اولویت منابع تنظیمات
+### Configuration Precedence
 
-اگر یک تنظیم در چند جا مقدار داشته باشد، اولویت به این ترتیب است:
+If a setting is defined in more than one place, the priority is:
 
-1. متغیر محیطی واقعی سیستم (بالاترین اولویت)
-2. فایل `.env`
-3. مقدار پیش‌فرض در `config.py`
+1. System environment variable (highest priority)
+2. `.env` file
+3. Default value in `config.py`
 
-## داده‌های نمونه (Seed)
+## Seed Data
 
-با هر بار اجرای سرور، اگر `SEED_DATA` برابر `true` باشد (پیش‌فرض)، **۵ کتاب نمونه** به‌صورت خودکار بارگذاری می‌شود تا نیازی به افزودن دستی کتاب برای امتحان کردن نباشد. کد این بخش در `src/library/data/seed.py` است و با مکانیزم **lifespan** در FastAPI هنگام شروع سرور اجرا می‌شود.
+When the server starts, if `SEED_DATA` is `true` (the default) and the `books` table is **empty**, **five sample books** are loaded. This logic is in `src/library/data/seed.py` and runs through FastAPI's **lifespan** mechanism.
 
-**فعال کردن:** `SEED_DATA=true` (یا اصلاً چیزی تنظیم نکنید)
+Because data is stored in the database:
 
-**غیرفعال کردن:** `SEED_DATA=false` (روش‌های تنظیم در بخش قبل توضیح داده شد). در این حالت `GET /books` یک لیست خالی `[]` برمی‌گرداند.
+- Sample books are inserted only **once**, when the table is empty, and are not duplicated on later runs.
+- Books you add, update, or delete remain changed after the server restarts.
+- If you delete every book and restart the server, the sample books will be loaded again.
 
-شناسه‌ی کتاب‌های نمونه **ثابت** است، پس بعد از هر بار راه‌اندازی مجدد، آدرس‌های زیر همیشه کار می‌کنند:
+**Enable:** Set `SEED_DATA=true` (or leave it unset).
 
-| عنوان | شناسه |
+**Disable:** Set `SEED_DATA=false` (see the configuration methods above). If the database is empty in this case, `GET /books` returns an empty list: `[]`.
+
+The sample book IDs are **fixed**, so these URLs always work:
+
+| Title | ID |
 |---|---|
 | Dune | `11111111-1111-4111-8111-111111111111` |
 | 1984 | `22222222-2222-4222-8222-222222222222` |
@@ -352,92 +454,111 @@ SEED_DATA=false uv run uvicorn library.main:app --reload
 | The Hobbit | `44444444-4444-4444-8444-444444444444` |
 | Frankenstein | `55555555-5555-4555-8555-555555555555` |
 
-برای مثال:
+For example:
 
 ```bash
 curl http://127.0.0.1:8000/books/11111111-1111-4111-8111-111111111111
 ```
 
-## اجرای تست‌ها
+## Running Tests
 
-ابتدا مطمئن شوید وابستگی‌های توسعه نصب شده‌اند (دستور `uv sync` به‌طور پیش‌فرض آن‌ها را هم نصب می‌کند):
+First, make sure the development dependencies are installed. By default, `uv sync` installs them as well:
 
 ```bash
 uv sync
 ```
 
-سپس از **پوشه‌ی اصلی پروژه** (کنار فایل `pyproject.toml`) اجرا کنید:
+Then run the tests from the **project root directory**, next to `pyproject.toml`:
 
 ```bash
 uv run pytest
 ```
 
-برای خروجی مفصل‌تر:
+For more detailed output:
 
 ```bash
 uv run pytest -v
 ```
 
-اجرای یک تست مشخص:
+Run a specific test:
 
 ```bash
 uv run pytest tests/test_books.py::test_create_book
 ```
 
-چند نکته درباره‌ی تست‌ها:
+A few notes about the tests:
 
-- هر تست با یک ذخیره‌ساز خالی شروع می‌شود (فیکسچر `clean_store` در `tests/conftest.py`)، پس تست‌ها مستقل از هم هستند.
-- `TestClient` بدون `with` استفاده می‌شود، بنابراین lifespan اجرا نمی‌شود و داده‌های نمونه بارگذاری **نمی‌شوند**.
-- تست‌ها فقط از طریق HTTP با API کار می‌کنند و از نحوه‌ی ذخیره‌سازی داده‌ها خبر ندارند.
+- Tests **do not connect to PostgreSQL**. They use an in-memory SQLite database, so your actual data is never modified and PostgreSQL does not need to be running.
+- The `clean_store` fixture in `tests/conftest.py` creates an empty database for each test and overrides the `get_db` dependency, keeping tests independent.
+- `TestClient` is used without a `with` block, so the application lifespan does not run and sample data is **not loaded**.
+- Tests interact with the API over HTTP and do not depend on how data is stored.
 
-## معماری پروژه
+## Project Architecture
 
-کد به چند لایه تقسیم شده و هر لایه فقط یک کار دارد. هر لایه فقط با لایه‌ی پایین‌تر از خودش صحبت می‌کند:
+The code is divided into layers, each with a single responsibility. Each layer communicates only with the layer directly below it:
 
+```text
+HTTP Request
+     │
+     ▼
+  Router   (routers/)   ← Handles the request and obtains a database session (Depends(get_db))
+     │
+     ▼
+  Service  (services/)  ← Application logic, e.g. treating "book not found" as an error
+     │
+     ▼
+  Data     (data/)      ← Reads from and writes to PostgreSQL
+     │
+     ▼
+  PostgreSQL
 ```
-درخواست HTTP
-     │
-     ▼
- Router   (routers/)   ← دریافت درخواست، برگرداندن پاسخ
-     │
-     ▼
- Service  (services/)  ← منطق برنامه، مثلاً «کتاب پیدا نشد» یک خطاست
-     │
-     ▼
- Data     (data/)      ← خواندن و نوشتن (فعلاً یک دیکشنری)
-```
 
-| لایه | مسئولیت |
+| Layer / File | Responsibility |
 |---|---|
-| `schemas/` | شکل داده‌ها: `BookCreate` (ورودی ساخت)، `BookUpdate` (ورودی ویرایش)، `BookRead` (خروجی) |
-| `routers/` | تعریف مسیرها با `APIRouter` |
-| `services/` | منطق برنامه (ساخت شناسه، اعمال ویرایش، بررسی وجود کتاب) |
-| `data/` | ذخیره‌سازی. تنها لایه‌ای که می‌داند کتاب‌ها داخل یک دیکشنری هستند |
-| `exceptions.py` | خطای `BookNotFoundError` که در `main.py` به پاسخ `404` تبدیل می‌شود |
+| `schemas/` | API data shapes: `BookCreate` (creation input), `BookUpdate` (update input), and `BookRead` (output) |
+| `routers/` | Defines routes with `APIRouter` and injects the database session |
+| `services/` | Application logic (generating IDs, applying updates, checking whether a book exists) |
+| `data/database.py` | Creates the `engine`, `SessionLocal`, and `get_db` function |
+| `data/models.py` | Defines the `books` table using SQLAlchemy |
+| `data/book_store.py` | The only place where database queries are written; inputs and outputs are `BookRead` models |
+| `exceptions.py` | Defines `BookNotFoundError`, which `main.py` converts into a `404` response |
 
-مزیت این ساختار این است که اگر در آینده بخواهید دیکشنری را با یک دیتابیس واقعی عوض کنید، فقط پوشه‌ی `data/` تغییر می‌کند.
+### Design Notes
 
-## محدودیت‌ها
+- **There are two kinds of book models.** `BookRead` and the other schemas define API data using Pydantic, while `Book` in `models.py` represents the database table using SQLAlchemy. Conversion between them happens only in `book_store.py`, so services and routers do not need to know about SQLAlchemy.
+- **A session per request:** `get_db` opens a session for each request and closes it when the request finishes.
+- **`pool_pre_ping=True`** is enabled when creating the engine. If PostgreSQL restarts, stale connections can be detected and replaced rather than causing an error.
+- Tables are created at application startup using `Base.metadata.create_all`.
 
-این پروژه یک تمرین آموزشی است و برای استفاده‌ی واقعی (Production) طراحی نشده است:
+## Limitations
 
-- **داده‌ها دائمی نیستند.** با خاموش شدن سرور همه‌چیز پاک می‌شود.
-- **دیتابیس ندارد** و با چند worker هم به‌درستی کار نمی‌کند (هر worker دیکشنری جداگانه‌ای دارد).
-- **احراز هویت و سطح دسترسی ندارد.** هر کسی می‌تواند کتاب‌ها را تغییر دهد.
-- `published_date` فعلاً یک رشته‌ی ساده است و فرمت تاریخ را بررسی نمی‌کند.
-- امکان جستجو، فیلتر و صفحه‌بندی (Pagination) وجود ندارد.
+This is an educational project and is **not designed for production use**:
 
-ایده‌هایی برای توسعه‌ی بعدی: اتصال به دیتابیس با SQLModel یا SQLAlchemy، بررسی فرمت تاریخ، افزودن جستجو و صفحه‌بندی، و افزودن مدل اعضا و امانت کتاب.
+- **No database migrations.** `create_all` creates missing tables but does not modify existing tables or columns. If you change a model, you must update the table manually or use a tool such as Alembic.
+- **No authentication or authorization.** Anyone can modify books.
+- `published_date` is currently a plain string and its date format is not validated.
+- Search, filtering, and pagination are not implemented.
+- Database connection settings (pool size, etc.) use their default values.
 
-## عیب‌یابی
+Ideas for future improvements include adding Alembic migrations, using the `date` type for `published_date`, adding search and pagination, and introducing member and book-loan models.
 
-| مشکل | علت و راه‌حل |
+## Troubleshooting
+
+| Problem | Cause / Solution |
 |---|---|
-| `uv is not recognized` / `command not found: uv` | uv نصب نشده یا ترمینال بعد از نصب دوباره باز نشده است. بخش «نصب uv» را ببینید |
-| `ModuleNotFoundError: No module named 'library'` | هنوز `uv sync` را اجرا نکرده‌اید، یا دستور را بدون `uv run` و خارج از محیط مجازی اجرا کرده‌اید |
-| `uvicorn is not recognized` / `command not found` | دستور را با `uv run` شروع کنید (`uv run uvicorn ...`) و اگر باز هم خطا داد یک‌بار `uv sync` بزنید |
-| `Address already in use` | پورت ۸۰۰۰ اشغال است. از پورت دیگر استفاده کنید: `--port 8001` |
-| `GET /books` لیست خالی برمی‌گرداند | `SEED_DATA=false` تنظیم شده یا هنوز کتابی اضافه نکرده‌اید |
-| تغییر `.env` اعمال نمی‌شود | سرور را دوباره راه‌اندازی کنید و مطمئن شوید `.env` در پوشه‌ی اجرای دستور است |
-| `422 Unprocessable Entity` | ورودی نامعتبر است. پاسخ سرور دقیقاً می‌گوید کدام فیلد مشکل دارد |
-| خطای `httpx` یا `pytest` هنگام اجرای تست‌ها | وابستگی‌های توسعه نصب نشده‌اند. `uv sync` را بدون `--no-dev` اجرا کنید |
+| `uv is not recognized` / `command not found: uv` | `uv` is not installed, or the terminal was not reopened after installation. See [Installing uv](#installing-uv). |
+| `ModuleNotFoundError: No module named 'library'` | You have not run `uv sync`, or you ran the command without `uv run` and outside the virtual environment. |
+| `ModuleNotFoundError: No module named 'library.data.database'` (or `models`) | The file is missing or misnamed (e.g. `database,py` instead of `database.py`). Check filenames with `dir src\library\data`. |
+| `No module named 'psycopg'` | The driver is not installed. Run `uv sync`. |
+| `uvicorn is not recognized` / `command not found` | Run the command with `uv run` (`uv run uvicorn ...`). If the error persists, run `uv sync` again. |
+| `Address already in use` | Port 8000 is occupied. Use another port: `--port 8001`. |
+| `'Settings' object has no attribute 'database_url'` | The `database_url` field has not been added to the `Settings` class in `config.py`. |
+| `password authentication failed for user "postgres"` | The password in `DATABASE_URL` does not match the PostgreSQL password. Update it in `.env`. |
+| The database URL still shows the default value | The `.env` file was not found or read. Its name must be exactly `.env` (not `.env.txt`) and it must be next to `pyproject.toml`. Restart the server. |
+| `connection refused` / `could not connect to server` | PostgreSQL is not running or the port is incorrect. On Windows, open `services.msc` and start the `postgresql-x64-...` service. |
+| `database "library" does not exist` | The database has not been created. See [Create the `library` database](#create-the-library-database). |
+| `server closed the connection unexpectedly` | PostgreSQL restarted or the connection was interrupted. Restart the FastAPI server and make sure `pool_pre_ping=True` is set in `database.py`. |
+| `GET /books` returns an empty list | `SEED_DATA=false` is set, or all books were deleted and the server has not been restarted. |
+| Changes to `.env` are not applied | Stop the server completely (`Ctrl+C`), restart it, and make sure `.env` is in the directory from which you run the command. |
+| `422 Unprocessable Entity` | The input is invalid. The server response identifies the field causing the problem. |
+| `httpx` or `pytest` errors when running tests | Development dependencies are not installed. Run `uv sync` without `--no-dev`. |
